@@ -57,3 +57,47 @@ def blur_faces(ruta_img,json_path):
         img[y:y + height, x:x + width] = blurred_face
 
     save_image(ruta_img,'_Dif',img)
+
+###########################################################################################
+# Caso 2
+# A partir del caso práctico anterior, se desea diseñar una aplicación similar pero que solo se le
+# aplique difuminado a los rostros que se identifiquen como menores, para ello se atenderá a la edad
+# mínima en la horquilla de la clasificación.
+###########################################################################################
+
+def blur_menor(ruta_img,json_path):
+    img = cv2.imread(ruta_img)
+    # Obtener las dimensiones de la imagen
+    image_height, image_width, _ = img.shape
+
+    with open(json_path, "r") as file:
+        data = json.load(file)
+
+    # Verificar si existen detalles de caras
+    if "FaceDetails" not in data or not data["FaceDetails"]:
+        raise ValueError("El archivo JSON no contiene información de las caras.")
+
+    # Procesar cada cara detectada en el JSON
+    for face in data["FaceDetails"]:
+        bounding_box = face.get("BoundingBox", {})
+        age = face.get('AgeRange',{})
+        if not bounding_box and not age:
+            continue
+
+        if age['Low'] < 18:
+            # Calcular las coordenadas absolutas de la cara
+            x = int(bounding_box["Left"] * image_width)
+            y = int(bounding_box["Top"] * image_height)
+            width = int(bounding_box["Width"] * image_width)
+            height = int(bounding_box["Height"] * image_height)
+
+            # Recortar el área de la cara
+            face_region = img[y:y + height, x:x + width]
+
+            # Aplicar un filtro Gaussiano para difuminar la región
+            blurred_face = cv2.GaussianBlur(face_region, (51, 51), 30)
+
+            # Reemplazar la región original con la difuminada
+            img[y:y + height, x:x + width] = blurred_face
+
+    save_image(ruta_img, '_DifMen', img)
