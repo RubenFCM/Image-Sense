@@ -5,7 +5,6 @@ import os
 import json
 
 
-
 # Función para guardar una imagen en la carpeta img
 def save_image(ruta, text, img):
     # Usar os.path.splitext() para separar el nombre y la extensión
@@ -22,8 +21,7 @@ def save_image(ruta, text, img):
 # generando una nueva imagen, a través de la información extraída de un json usando AWS Rekognition.
 ###########################################################################################
 
-def blur_faces(ruta_img,json_path):
-
+def blur_faces(ruta_img, json_path):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -56,7 +54,8 @@ def blur_faces(ruta_img,json_path):
         # Reemplazar la región original con la difuminada
         img[y:y + height, x:x + width] = blurred_face
 
-    save_image(ruta_img,'_Dif',img)
+    save_image(ruta_img, '_Dif', img)
+
 
 ###########################################################################################
 # Caso 2
@@ -65,7 +64,7 @@ def blur_faces(ruta_img,json_path):
 # mínima en la horquilla de la clasificación.
 ###########################################################################################
 
-def blur_menor(ruta_img,json_path):
+def blur_menor(ruta_img, json_path):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -80,7 +79,7 @@ def blur_menor(ruta_img,json_path):
     # Procesar cada cara detectada en el JSON
     for face in data["FaceDetails"]:
         bounding_box = face.get("BoundingBox", {})
-        age = face.get('AgeRange',{})
+        age = face.get('AgeRange', {})
         if not bounding_box and not age:
             continue
 
@@ -101,3 +100,50 @@ def blur_menor(ruta_img,json_path):
             img[y:y + height, x:x + width] = blurred_face
 
     save_image(ruta_img, '_DifMen', img)
+
+
+###########################################################################################
+# Caso 3
+# A partir de los casos prácticos anteriores, se desea diseñar una aplicación que realice
+# reconocimiento facial y clasificación de rostros. Se marcarán los rostros con un marco y una
+# etiqueta ajustada al mismo.
+
+# Si el rostro se corresponde con un menor, será de color amarillo
+# Si el rostro se corresponde con un hombre, será de color rojo.
+# Si el rostro se corresponde con una mujer, será de color verde.
+
+###########################################################################################
+
+def square_faces(ruta_img, json_path):
+    img = cv2.imread(ruta_img)
+    # Obtener las dimensiones de la imagen
+    image_height, image_width, _ = img.shape
+
+    with open(json_path, "r") as file:
+        data = json.load(file)
+
+    # Verificar si existen detalles de caras
+    if "FaceDetails" not in data or not data["FaceDetails"]:
+        raise ValueError("El archivo JSON no contiene información de las caras.")
+
+    # Procesar cada cara detectada en el JSON
+    for face in data["FaceDetails"]:
+        bounding_box = face.get("BoundingBox", {})
+        age = face.get('AgeRange', {})
+        gender = face.get('Gender',{})
+        if not bounding_box and not age:
+            continue
+        # Calcular las coordenadas absolutas de la cara
+        x = int(bounding_box["Left"] * image_width)
+        y = int(bounding_box["Top"] * image_height)
+        width = int(bounding_box["Width"] * image_width)
+        height = int(bounding_box["Height"] * image_height)
+
+        if gender['Value'] == 'Male' and age['Low'] >= 18:
+            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 0, 255), 2)
+        elif gender['Value'] == 'Female' and age['Low'] >= 18:
+            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 255, 0), 2)
+        else:
+            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 255, 255), 2)
+
+    save_image(ruta_img, '_Box', img)
