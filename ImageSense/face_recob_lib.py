@@ -1,18 +1,31 @@
 # Importar libreria cv2
 # Instalar cv2  pip3 install opencv-python
+from email.policy import default
+
 import cv2
 import os
 import json
 
 
 # Función para guardar una imagen en la carpeta img
-def save_image(ruta, text, img):
-    # Usar os.path.splitext() para separar el nombre y la extensión
-    nombre, extension = os.path.splitext(ruta)
-    # Crear la nueva ruta con el nombre modificado y la misma extensión
-    nueva_imagen = nombre + text + extension
-    # La guardamos en memoria en un fichero distinto y devolvemos la ruta
-    cv2.imwrite(nueva_imagen, img)
+def save_image(img,ruta_salida, nombre_imagen, ruta_img,default):
+    # Si no se proporciona una ruta de salida, usa una por defecto
+    if not ruta_salida:
+        ruta_salida = '../imagenes/'
+
+    # Si no se especifica un nombre de imagen, usar el nombre de la imagen original
+    if not nombre_imagen:
+        nombre_imagen = os.path.splitext(os.path.basename(ruta_img))[0] + default
+
+    # Asegúrate de que ruta_salida tenga un nombre de archivo válido
+    if not os.path.splitext(ruta_salida)[1]:  # Si no tiene extensión
+        ruta_salida = os.path.join(ruta_salida, nombre_imagen + '.jpg')
+
+    # Asegurarse de que la ruta de salida sea válida
+    if not os.path.exists(os.path.dirname(ruta_salida)) and os.path.dirname(ruta_salida):
+        os.makedirs(os.path.dirname(ruta_salida))
+    # Guardar la imagen con los cambios
+    cv2.imwrite(ruta_salida, img)
 
 
 ###########################################################################################
@@ -21,7 +34,7 @@ def save_image(ruta, text, img):
 # generando una nueva imagen, a través de la información extraída de un json usando AWS Rekognition.
 ###########################################################################################
 
-def blur_faces(ruta_img, json_path):
+def blur_faces(ruta_img, json_path, nombre_imagen = '',ruta_salida=''):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -54,7 +67,8 @@ def blur_faces(ruta_img, json_path):
         # Reemplazar la región original con la difuminada
         img[y:y + height, x:x + width] = blurred_face
 
-    save_image(ruta_img, '_Dif', img)
+    save_image(img,ruta_salida, nombre_imagen, ruta_img,'_Dif')
+
 
 
 ###########################################################################################
@@ -147,3 +161,18 @@ def square_faces(ruta_img, json_path):
             cv2.rectangle(img, (x, y), (x + width, y + height), (0, 255, 255), 2)
 
     save_image(ruta_img, '_Box', img)
+
+###########################################################################################
+# Caso 4
+# En la línea de los casos prácticos anteriores, se desea aplicar reconocimiento facial a una imagen,
+# reconociendo los distintos rostros que aparecen y permitiendo el etiquetado de los mismos.
+
+# Se debe articular un sistema que permita al usuario indicar el nombre (o una etiqueta) a un rostro,
+# dichos datos se almacenarán en un documento xml/json que contendrá toda la información relativa
+# al proceso realizado, la imagen original, los rostros detectados (posición, nombre, edad, sexo,
+# estado de ánimo, etc).
+
+# Además se diseñará una función que permita aplicar un xml generado anteriormente a una imagen
+# con el objetivo de generar una nueva imagen donde se hacen visibles los datos que contiene.
+
+###########################################################################################
