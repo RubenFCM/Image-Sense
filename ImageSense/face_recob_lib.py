@@ -7,21 +7,21 @@ import os
 import json
 
 
-# Función para guardar una imagen en la carpeta img
-def save_image(img,ruta_salida, nombre_imagen, ruta_img,default):
+# Función para guardar una imagen
+def save_image(img, ruta_salida, nombre_imagen, ruta_img, add_name):
     # Si no se proporciona una ruta de salida, usa una por defecto
     if not ruta_salida:
         ruta_salida = '../imagenes/'
 
     # Si no se especifica un nombre de imagen, usar el nombre de la imagen original
     if not nombre_imagen:
-        nombre_imagen = os.path.splitext(os.path.basename(ruta_img))[0] + default
+        nombre_imagen = os.path.splitext(os.path.basename(ruta_img))[0] + add_name
 
-    # Asegúrate de que ruta_salida tenga un nombre de archivo válido
+    # Asegurar de que ruta_salida tenga un nombre de archivo válido
     if not os.path.splitext(ruta_salida)[1]:  # Si no tiene extensión
         ruta_salida = os.path.join(ruta_salida, nombre_imagen + '.jpg')
 
-    # Asegurarse de que la ruta de salida sea válida
+    # Asegurar de que la ruta de salida sea válida
     if not os.path.exists(os.path.dirname(ruta_salida)) and os.path.dirname(ruta_salida):
         os.makedirs(os.path.dirname(ruta_salida))
     # Guardar la imagen con los cambios
@@ -34,7 +34,7 @@ def save_image(img,ruta_salida, nombre_imagen, ruta_img,default):
 # generando una nueva imagen, a través de la información extraída de un json usando AWS Rekognition.
 ###########################################################################################
 
-def blur_faces(ruta_img, json_path, nombre_imagen = '',ruta_salida=''):
+def blur_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -67,8 +67,7 @@ def blur_faces(ruta_img, json_path, nombre_imagen = '',ruta_salida=''):
         # Reemplazar la región original con la difuminada
         img[y:y + height, x:x + width] = blurred_face
 
-    save_image(img,ruta_salida, nombre_imagen, ruta_img,'_Dif')
-
+    save_image(img, ruta_salida, nombre_imagen, ruta_img, '_Dif')
 
 
 ###########################################################################################
@@ -78,7 +77,7 @@ def blur_faces(ruta_img, json_path, nombre_imagen = '',ruta_salida=''):
 # mínima en la horquilla de la clasificación.
 ###########################################################################################
 
-def blur_menor(ruta_img, json_path):
+def blur_menor(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -113,7 +112,7 @@ def blur_menor(ruta_img, json_path):
             # Reemplazar la región original con la difuminada
             img[y:y + height, x:x + width] = blurred_face
 
-    save_image(ruta_img, '_DifMen', img)
+    save_image(img, ruta_salida, nombre_imagen, ruta_img, '_DifMen')
 
 
 ###########################################################################################
@@ -127,8 +126,25 @@ def blur_menor(ruta_img, json_path):
 # Si el rostro se corresponde con una mujer, será de color verde.
 
 ###########################################################################################
+def add_text(img, coord1, coord2, text):
+    # Dimensiones del rectángulo
+    box_width = coord2[0] - coord1[0]
+    box_height = coord2[1] - coord1[1]
+    # Tamaño inicial y cálculo de escala
+    font_scale = 1  # Escala inicial
+    thickness = 1
+    text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+    # Calcular la escala necesaria para ajustar el texto al área disponible
+    scale_width = box_width / text_size[0]
+    scale_height = box_height / text_size[1]
+    font_scale = min(scale_width, scale_height)  # Multiplicador de margen
+    # Calcular la posición del texto para centrarlo
+    text_x = coord1[0]
+    text_y = coord2[1]
+    return cv2.putText(img, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
 
-def square_faces(ruta_img, json_path):
+
+def square_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -144,7 +160,10 @@ def square_faces(ruta_img, json_path):
     for face in data["FaceDetails"]:
         bounding_box = face.get("BoundingBox", {})
         age = face.get('AgeRange', {})
-        gender = face.get('Gender',{})
+        gender = face.get('Gender', {})
+        emotions = face.get('Emotions', {})
+        # Obtener la emoción con la mayor confianza
+        primary_emotion = max(emotions, key=lambda e: e["Confidence"])["Type"]
         if not bounding_box and not age:
             continue
         # Calcular las coordenadas absolutas de la cara
@@ -153,14 +172,17 @@ def square_faces(ruta_img, json_path):
         width = int(bounding_box["Width"] * image_width)
         height = int(bounding_box["Height"] * image_height)
 
-        if gender['Value'] == 'Male' and age['Low'] >= 18:
-            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 0, 255), 2)
-        elif gender['Value'] == 'Female' and age['Low'] >= 18:
-            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 255, 0), 2)
+        # Determinar el color
+        if age['Low'] >= 18:
+            color = (0, 0, 255) if gender['Value'] == 'Male' else (0, 255, 0)
         else:
-            cv2.rectangle(img, (x, y), (x + width, y + height), (0, 255, 255), 2)
+            color = (0, 255, 255)
+        # Dibujar el rectángulo con el color determinado
+        cv2.rectangle(img, (x, y), (x + width, y + height), color, 1)
+        # Añadir la emoción de mayor confianza
+        img = add_text(img, (x, y), (x + width, y + height), primary_emotion)
 
-    save_image(ruta_img, '_Box', img)
+    save_image(img, ruta_salida, nombre_imagen, ruta_img, '_Box')
 
 ###########################################################################################
 # Caso 4
