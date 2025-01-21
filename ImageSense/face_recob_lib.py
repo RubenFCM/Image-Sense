@@ -184,6 +184,7 @@ def square_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
 
     save_image(img, ruta_salida, nombre_imagen, ruta_img, '_Box')
 
+
 ###########################################################################################
 # Caso 4
 # En la línea de los casos prácticos anteriores, se desea aplicar reconocimiento facial a una imagen,
@@ -198,3 +199,59 @@ def square_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
 # con el objetivo de generar una nueva imagen donde se hacen visibles los datos que contiene.
 
 ###########################################################################################
+
+def prueba(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
+    img = cv2.imread(ruta_img)
+    # Obtener las dimensiones de la imagen
+    image_height, image_width, _ = img.shape
+
+    with open(json_path, "r") as file:
+        data = json.load(file)
+
+    # Verificar si existen detalles de caras
+    if "FaceDetails" not in data or not data["FaceDetails"]:
+        raise ValueError("El archivo JSON no contiene información de las caras.")
+
+    # Crear una nueva estructura para el JSON filtrado
+    filtered_data = {"FaceDetails": []}
+
+    # Procesar cada cara detectada en el JSON
+    for face in data["FaceDetails"]:
+        bounding_box = face.get("BoundingBox", {})
+        age = face.get('AgeRange', {})
+        gender = face.get('Gender', {})
+        emotions = face.get('Emotions', {})
+        if not bounding_box and not age:
+            continue
+        # Calcular las coordenadas absolutas de la cara
+        x = int(bounding_box["Left"] * image_width)
+        y = int(bounding_box["Top"] * image_height)
+        width = int(bounding_box["Width"] * image_width)
+        height = int(bounding_box["Height"] * image_height)
+        # Recortar la región de la cara
+        face_region = img[y:y + height, x: x + width]
+        cv2.imshow('Cara encontrada', face_region)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        name = input('Cual es nombre de la persona se acaba de mostrar:')
+        # Agregar los datos filtrados
+        filtered_data["FaceDetails"].append({
+            "BoundingBox": bounding_box,
+            "Name": name,  # Campo para nombre (puede ser completado más tarde)
+            "Age": age,
+            "Gender": gender,
+            "Emotions": emotions
+        })
+
+        # Dibujar el rectángulo con el color determinado
+        cv2.rectangle(img, (x, y), (x + width, y + height), (0,0,255), 1)
+        # Añadir la emoción de mayor confianza
+        img = add_text(img, (x, y), (x + width, y + height), name)
+
+    save_image(img, ruta_salida, nombre_imagen, ruta_img, '_IA')
+
+    # Guardar el JSON filtrado en un nuevo archivo
+    with open('../json/prueba.json', "w") as outfile:
+        json.dump(filtered_data, outfile, indent=4)
+
+    print(f"JSON filtrado guardado en la carpeta JSON")
