@@ -35,6 +35,14 @@ def save_image(img, ruta_salida, nombre_imagen, ruta_img, add_name):
 ###########################################################################################
 
 def blur_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
+    # Verificar si la ruta de la imagen es correcta
+    if not os.path.exists(ruta_img):
+        raise FileNotFoundError(f"No se pudo encontrar la imagen en la ruta: {ruta_img}")
+
+    # Verificar si la ruta del JSON es correcta
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"No se pudo encontrar el archivo JSON en la ruta: {json_path}")
+
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -78,6 +86,14 @@ def blur_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
 ###########################################################################################
 
 def blur_menor(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
+    # Verificar si la ruta de la imagen es correcta
+    if not os.path.exists(ruta_img):
+        raise FileNotFoundError(f"No se pudo encontrar la imagen en la ruta: {ruta_img}")
+
+    # Verificar si la ruta del JSON es correcta
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"No se pudo encontrar el archivo JSON en la ruta: {json_path}")
+
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -127,6 +143,7 @@ def blur_menor(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
 
 ###########################################################################################
 def add_text(img, coord1, coord2, text):
+
     # Dimensiones del rectángulo
     box_width = coord2[0] - coord1[0]
     box_height = coord2[1] - coord1[1]
@@ -145,6 +162,14 @@ def add_text(img, coord1, coord2, text):
 
 
 def square_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
+    # Verificar si la ruta de la imagen es correcta
+    if not os.path.exists(ruta_img):
+        raise FileNotFoundError(f"No se pudo encontrar la imagen en la ruta: {ruta_img}")
+
+    # Verificar si la ruta del JSON es correcta
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"No se pudo encontrar el archivo JSON en la ruta: {json_path}")
+
     img = cv2.imread(ruta_img)
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
@@ -200,8 +225,17 @@ def square_faces(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
 
 ###########################################################################################
 
-def prueba(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
+def procesar_imagen(ruta_img, json_path, nombre_imagen='', ruta_salida='',nombre_json=''):
+    # Verificar si la ruta de la imagen es correcta
+    if not os.path.exists(ruta_img):
+        raise FileNotFoundError(f"No se pudo encontrar la imagen en la ruta: {ruta_img}")
+
+    # Verificar si la ruta del JSON es correcta
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"No se pudo encontrar el archivo JSON en la ruta: {json_path}")
+
     img = cv2.imread(ruta_img)
+
     # Obtener las dimensiones de la imagen
     image_height, image_width, _ = img.shape
 
@@ -238,7 +272,7 @@ def prueba(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
         filtered_data["FaceDetails"].append({
             "BoundingBox": bounding_box,
             "Name": name,  # Campo para nombre (puede ser completado más tarde)
-            "Age": age,
+            "AgeRange": age,
             "Gender": gender,
             "Emotions": emotions
         })
@@ -251,7 +285,11 @@ def prueba(ruta_img, json_path, nombre_imagen='', ruta_salida=''):
     save_image(img, ruta_salida, nombre_imagen, ruta_img, '_IA')
 
     # Guardar el JSON filtrado en un nuevo archivo
-    with open('../json/prueba.json', "w") as outfile:
-        json.dump(filtered_data, outfile, indent=4)
+    if nombre_json:
+        with open(f'../json/{nombre_json}.json', "w") as outfile:
+            json.dump(filtered_data, outfile, indent=4)
+    else:
+        with open('../json/json_de_prueba.json', "w") as outfile:
+            json.dump(filtered_data, outfile, indent=4)
 
     print(f"JSON filtrado guardado en la carpeta JSON")
